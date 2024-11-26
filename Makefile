@@ -1,8 +1,12 @@
-KERNEL_DIR := /usr/src/linux-headers-6.6.20+rpt-rpi-v8
+KVERS = $(shell uname -r)
+KERNEL_DIR := /usr/src/linux-headers-$(KVERS)
 
 CURRENT_PATH := $(shell pwd)
 
-obj-m := hello.o
+obj-m += hello.o
+
+# 开启调试功能
+EXTRA_CFLAGS=-g -O0
 
 build: kernel_modules
 
@@ -11,3 +15,9 @@ kernel_modules:
 
 clean:
 	$(MAKE) -C $(KERNEL_DIR) M=$(CURRENT_PATH) clean
+
+install:
+	sudo insmod hello.ko
+
+uninstall:
+	sudo rmmod hello.ko
