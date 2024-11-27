@@ -18,6 +18,8 @@ clean:
 
 install:
 	sudo insmod globalmem.ko
+	sudo mknod /dev/globalmem c 230 0
+	sudo chmod 777 /dev/globalmem
 
 uninstall:
 	sudo rmmod globalmem.ko
