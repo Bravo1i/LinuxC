@@ -4,12 +4,13 @@
 #include <linux/cdev.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <linux/poll.h>
 
 #define GLOBALFIFO_SIZE 0x1000
 // #define MEM_CLEAR 0x1
 // 使用幻数定义cmd
 #define GLOBALFIFO_MAGIC 'g'
-#define MEM_CLEAR _IO(GLOBALFIFO_MAGIC, 0)
+#define MEM_CLEAR 0x1
 #define GLOBALFIFO_MAJOR 230
 
 static int globalfifo_major = GLOBALFIFO_MAJOR;
@@ -116,6 +117,27 @@ out2:
     return ret;
 }
 
+static unsigned int globalfifo_poll(struct file *filp, poll_table * wait)
+{
+    unsigned int mask = 0;
+    struct globalfifo_dev *dev = filp->private_data;
+
+    mutex_lock(&dev->mutex);
+    poll_wait(filp, &dev->r_wait, wait);
+    poll_wait(filp, &dev->w_wait, wait);
+
+    if (dev->current_len != 0) {
+        mask |= POLLIN | POLLRDNORM;
+    }
+
+    if (dev->current_len != GLOBALFIFO_SIZE) {
+        mask |= POLLOUT | POLLWRNORM;
+    }
+
+    mutex_unlock(&dev->mutex);
+    return mask;
+}
+
 static loff_t globalfifo_llseek(struct file *filp, loff_t offset, int orig)
 {
     loff_t ret = 0;
@@ -191,6 +213,7 @@ static const struct file_operations globalfifo_fops = {
     .unlocked_ioctl = globalfifo_ioctl,
     .open = globalfifo_open,
     .release = globalfifo_release,
+    .poll = globalfifo_poll,
 };
 // 文件描述符
 
